@@ -52,17 +52,17 @@
 #include <sys/vmmeter.h>
 
 
-/* why is this only defined in the kernel */
-#define	timespecadd(vvp, uvp)						\
-	do {								\
-		(vvp)->tv_sec += (uvp)->tv_sec;				\
-		(vvp)->tv_nsec += (uvp)->tv_nsec;			\
-		if ((vvp)->tv_nsec >= 1000000000) {			\
-			(vvp)->tv_sec++;				\
-			(vvp)->tv_nsec -= 1000000000;			\
-		}							\
-	} while (0)
-
+#ifndef	timespecadd
+#define timespecadd(tsp, usp, vsp)                                      \
+        do {                                                            \
+                (vsp)->tv_sec = (tsp)->tv_sec + (usp)->tv_sec;          \
+                (vsp)->tv_nsec = (tsp)->tv_nsec + (usp)->tv_nsec;       \
+                if ((vsp)->tv_nsec >= 1000000000L) {                    \
+                        (vsp)->tv_sec++;                                \
+                        (vsp)->tv_nsec -= 1000000000L;                  \
+                }                                                       \
+        } while (0)
+#endif
 
 #define SWAP_CPU() { cpu_tmp = cpu; cpu = cpu_prev; cpu_prev = cpu_tmp; }
 double
@@ -468,7 +468,7 @@ main(int argc, char **argv)
 		if (++row == rows)
 			row = 0;
 
-		timespecadd(&deadline_ts, &interval_ts);
+		timespecadd(&deadline_ts, &interval_ts, &deadline_ts);
 		clock_nanosleep(CLOCK_UPTIME, TIMER_ABSTIME, &deadline_ts, NULL);
 	}
 }
