@@ -134,7 +134,7 @@ find_if(char *wanted)
 	size_t len;
 	int if_maxidx, i;
 	int name[6];
-	char ifn[128];
+	struct ifmibdata ifm;
 
 	name[0] = CTL_NET;
 	name[1] = PF_LINK;
@@ -150,14 +150,14 @@ find_if(char *wanted)
 	for (i = 0; i <= if_maxidx; i++) {
 		name[3] = IFMIB_IFDATA;
 		name[4] = i;
-		name[5] = IFDATA_DRIVERNAME;
-		len = sizeof(ifn);
-		if (sysctl(name, 6, ifn, &len, 0, 0) < 0) {
+		name[5] = IFDATA_GENERAL;
+		len = sizeof(ifm);
+		if (sysctl(name, 6, &ifm, &len, 0, 0) < 0) {
 			if (errno == ENOENT)
 				continue;
 			err(EX_OSERR, "can't get ifname");
 		}
-		if (0 == strncmp(wanted, ifn, len))
+		if (0 == strncmp(wanted, ifm.ifmd_name, len))
 			return (i);
 	}
 	printf("Could not find %s\n", wanted);
