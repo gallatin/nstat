@@ -228,7 +228,7 @@ get_pcm_mem(double interval, double *r, double *w, double *rw)
 	char *open_str;
 	char buf[256];
 	char *p;
-	int sem_cnt, ret_found;
+	int comma_cnt, ret_found;
 	ssize_t bytes;
 
 	if (pipe == NULL) {
@@ -260,23 +260,23 @@ get_pcm_mem(double interval, double *r, double *w, double *rw)
 	 * the CSV is formatted as: ...; ....;  readbw; writebw;  rwbw\n
 	 *
 	 * So we start at the end of the buffer, and look backwards for a
-	 * return.  Once found, we then count back 3 semi-colons, and then
+	 * return.  Once found, we then count back 3 commas, and then
 	 * pass it to sscanf
 	 */
 
 	ret_found = 0;
-	sem_cnt = 0;
-	while (p != buf && sem_cnt < 3) {
+	comma_cnt = 0;
+	while (p != buf && comma_cnt < 3) {
 		p--;
 		if (!ret_found && *p != '\n')
 			continue;
 		ret_found = 1;
-		if (*p == ';')
-			sem_cnt++;
+		if (*p == ',')
+			comma_cnt++;
 	}
-	if (sem_cnt == 3) {
+	if (comma_cnt == 3) {
 		p++;
-		sscanf(p, "%lf; %lf; %lf", r, w, rw);
+		sscanf(p, "%lf, %lf, %lf", r, w, rw);
 	}
 }
 
