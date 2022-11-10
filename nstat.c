@@ -234,7 +234,7 @@ get_pcm_mem(double interval, double *r, double *w, double *rw)
 	if (pipe == NULL) {
 		open_str = alloca(80);
 		snprintf(open_str, 80,
-		    "pcm-memory.x -csv %f  2>/dev/null", interval * 0.99);
+		    "pcm-memory -csv %f  2>/dev/null", interval * 0.99);
 		pipe = popen(open_str, "r");
 		if (pipe == NULL)
 			err(EX_OSERR, "pipe");
@@ -247,12 +247,12 @@ get_pcm_mem(double interval, double *r, double *w, double *rw)
 	bytes = read(pipe_fd, buf, sizeof(buf));
 	if (bytes == 0)
 		err(EX_OSERR,
-		    "pcm-memory.x exited - kldload cpuctl?");
+		    "pcm-memory exited - kldload cpuctl?");
 
 	if (bytes == -1) {
 		if (errno == EAGAIN)
 			return;
-		err(EX_OSERR, "read from pcm-memory.x failed");
+		err(EX_OSERR, "read from pcm-memory failed");
 	}
 
 	p = &buf[bytes];
