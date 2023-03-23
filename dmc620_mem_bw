@@ -1,0 +1,22 @@
+#! /bin/sh
+
+# Extract & display memory bandwidth at intervals (default: 1 sec)
+
+me=${0#*/}
+usage="Usage: $me [-w interval_sec]"
+
+interval=1
+while getopts "hw:" arg; do
+  case ${arg} in
+    h) echo "$usage"; exit 0;;
+    w) interval=${OPTARG};;
+    *) echo "$usage"; exit 1;;
+  esac
+done
+shift $(($OPTIND - 1))
+
+nr_mem_ch=$( devinfo | grep -c pmu_dmc62 )
+
+pmcstat -s clkdiv2_rdwr -w $interval 2>&1 |
+  awk -v nr_mem_ch=$nr_mem_ch -v interval=$interval \
+    '!/clk/ {printf "%0.3f GB/s\n", $1*64*nr_mem_ch/interval/1000000000}'
