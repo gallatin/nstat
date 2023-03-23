@@ -19,4 +19,4 @@ nr_mem_ch=$( devinfo | grep -c pmu_dmc62 )
 
 pmcstat -s clkdiv2_rdwr -w $interval 2>&1 |
   awk -v nr_mem_ch=$nr_mem_ch -v interval=$interval \
-    '!/clk/ {printf "%0.3f GB/s\n", $1*64*nr_mem_ch/interval/1000000000}'
+    '!/clk/ {printf "%0.3f GB/s\n", $1*64*nr_mem_ch/interval/1000000000; fflush();}'

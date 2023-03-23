@@ -35,6 +35,7 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -220,6 +221,8 @@ find_rows(void)
 	return (rows);
 }
 
+#ifdef __amd64__
+
 static void
 get_pcm_mem(double interval, double *r, double *w, double *rw)
 {
@@ -279,6 +282,60 @@ get_pcm_mem(double interval, double *r, double *w, double *rw)
 		sscanf(p, "%lf, %lf, %lf", r, w, rw);
 	}
 }
+#elif defined __aarch64__
+static void
+get_pcm_mem(double interval, double *r __unused, double *w __unused, double *rw)
+{
+	static FILE * pipe = NULL;
+	static int pipe_fd;
+	char *open_str;
+	char buf[256];
+	char *p;
+	int  ret_found;
+	ssize_t bytes;
+
+	if (pipe == NULL) {
+		open_str = alloca(80);
+		snprintf(open_str, 80,
+		    "dmc620_mem_bw -w  %f  2>/dev/null", interval);
+		pipe = popen(open_str, "r");
+		if (pipe == NULL)
+			err(EX_OSERR, "pipe");
+		pipe_fd = fileno(pipe);
+		fcntl(pipe_fd, F_SETFL, O_NONBLOCK);
+		sleep(2*round(interval));
+	}
+	bzero(buf, sizeof(buf));
+	bytes = read(pipe_fd, buf, sizeof(buf));
+	if (bytes == 0)
+		err(EX_OSERR,
+		    "dmc620_mem_bw exited - is hwpmc enabled?");
+
+	if (bytes == -1) {
+		if (errno == EAGAIN)
+			return;
+		err(EX_OSERR, "read from dmc620_mem_bw failed");
+	}
+
+	p = buf;
+	ret_found = 0;
+	sscanf(p, "%lf", rw);
+	while (p < &buf[bytes] && !ret_found) {
+		if (*p == '\n')
+		  ret_found = 1;
+		p++;
+	}
+	p++;
+}
+#else
+static void
+get_pcm_mem(double interval __unused, double *r __unused,
+    double *w__unused, double *rw __unused)
+{
+	errno = ENOTSUP;
+	err(EX_OSERR, "Mem BW support not enabled on this platform");
+}
+#endif
 
 long
 get_tcp_est()
