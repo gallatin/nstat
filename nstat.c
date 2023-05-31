@@ -65,6 +65,63 @@
         } while (0)
 #endif
 
+int raw;
+
+int
+get_maxfreq(void)
+{
+
+	char *end, *freqstr, *p, *q;
+	int freq, maxfreq, power;
+	size_t len = 0;
+
+
+	if (raw)
+		return (-1);
+
+	if (sysctlbyname("dev.cpu.0.freq_levels", NULL, &len, NULL, 0))
+		return (-1);
+	if ((freqstr = malloc(len)) == NULL)
+		return (-1);
+	if (sysctlbyname("dev.cpu.0.freq_levels", freqstr, &len, NULL, 0)) {
+		free(freqstr);
+		return (-1);
+	}
+
+	maxfreq = -1;
+	end = freqstr + len;
+	*end = '\0';
+	for (p = freqstr; *p != '\0';) {
+		q = strchr(p, ' ');
+		if (q != NULL)
+			*q = '\0';
+		if (q == NULL)
+			return (maxfreq);
+		if (sscanf(p, "%d/%d", &freq, &power) != 2) {
+			free(freqstr);
+			return (maxfreq);
+		}
+		if (freq > maxfreq)
+			maxfreq = freq;
+		p = q + 1;
+	}
+	printf("found maxfreq = %d\n", maxfreq);
+	return (maxfreq);
+}
+
+int
+get_freq(void)
+{
+	int freq;
+	size_t len;
+
+	len = sizeof(freq);
+	if (sysctlbyname("dev.cpu.0.freq", &freq, &len, NULL, 0))
+		return (-1);
+
+	return (freq);
+}
+
 #define SWAP_CPU() { cpu_tmp = cpu; cpu = cpu_prev; cpu_prev = cpu_tmp; }
 double
 get_cpu(void)
@@ -74,7 +131,9 @@ get_cpu(void)
 	static long *cpu = cpu_time, *cpu_prev = cpu_time_too, *cpu_tmp;
 	long busy, idle;
 	size_t len;
-	int i, status;
+	int freq, i, status;
+	static int maxfreq = -2;
+	double pct;
 
 	SWAP_CPU();
 	len = sizeof(cpu_time);
@@ -88,7 +147,15 @@ get_cpu(void)
 	}
 	idle = cpu[CP_IDLE] - cpu_prev[CP_IDLE];
 
-	return ((double)busy / (double)(busy + idle) * 100.0);
+	if (maxfreq == -2)
+		maxfreq = get_maxfreq();
+	freq = get_freq();
+	pct = (double)busy / (double)(busy + idle) * 100.0;
+
+	if (maxfreq != -1 && freq != -1)
+		pct = pct * ((double) freq / (double)maxfreq);
+
+	return (pct);
 }
 
 #define SWAP_VM() { vmm_tmp = vmm; vmm = vmm_prev; vmm_prev = vmm_tmp; }
@@ -380,7 +447,7 @@ static void
 usage(char *name)
 {
 	fprintf(stderr,
-	    "usage: %s [-mst] [-I interface] [wait]\n", name);
+	    "usage: %s [-msrt] [-I interface] [wait]\n", name);
 	exit(1);
 }
 
@@ -407,10 +474,13 @@ main(int argc, char **argv)
 	double Xpps_div;
 
 
-	while ((c = getopt(argc, argv, "smtI:")) != -1) {
+	while ((c = getopt(argc, argv, "rsmtI:")) != -1) {
 		switch (c) {
 		case 'm':
 			do_pcm_mem = 1;
+			break;
+		case 'r':
+			raw = 1;
 			break;
 		case 's':
 			slow++;
