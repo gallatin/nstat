@@ -105,7 +105,6 @@ get_maxfreq(void)
 			maxfreq = freq;
 		p = q + 1;
 	}
-	printf("found maxfreq = %d\n", maxfreq);
 	return (maxfreq);
 }
 
@@ -152,7 +151,7 @@ get_cpu(void)
 	freq = get_freq();
 	pct = (double)busy / (double)(busy + idle) * 100.0;
 
-	if (maxfreq != -1 && freq != -1)
+	if (maxfreq != -1 && freq != -1 && maxfreq > freq)
 		pct = pct * ((double) freq / (double)maxfreq);
 
 	return (pct);
