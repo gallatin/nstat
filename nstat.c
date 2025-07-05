@@ -66,6 +66,7 @@
 #endif
 
 int raw;
+int pagesize;
 
 int
 get_maxfreq(void)
@@ -190,7 +191,7 @@ get_vmm(u_int *syscall, u_int *csw, u_int *irq, double *free)
 	*syscall = vmm->v_syscall - vmm_prev->v_syscall;
 	*csw = vmm->v_swtch - vmm_prev->v_swtch;
 	*irq = vmm->v_intr - vmm_prev->v_intr;
-	*free = ((double)vmm->v_free_count * 4096.0) /
+	*free = ((double)vmm->v_free_count * pagesize) /
 	    (1024.0 * 1024.0 * 1024.0);
 
 }
@@ -533,6 +534,7 @@ main(int argc, char **argv)
 	if_idx = find_if(ifname);
 	ifm = &ifmd[0];
 	ifm_prev = &ifmd[1];
+	pagesize = getpagesize();
 
 	/*
 	 * preload all the counters so 1st interval looks reasonable
